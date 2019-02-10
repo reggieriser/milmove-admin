@@ -102,7 +102,7 @@ class DutyStations(models.Model):
 
 
 class FuelEiaDieselPrices(models.Model):
-    id = models.UUIDField()
+    id = models.UUIDField(primary_key=True)
     pub_date = models.DateField()
     rate_start_date = models.DateField()
     rate_end_date = models.DateField()
@@ -171,19 +171,39 @@ class MoveDocuments(models.Model):
         unique_together = (('move', 'document'),)
 
 
+MOVE_TYPES = [
+    ('PPM', 'PPM'),
+    ('HHG', 'HHG'),
+    ('HHG_PPM', 'HHG with PPM'),
+]
+
+MOVE_STATUSES = [
+    ['DRAFT', 'Draft'],
+    ['SUBMITTED', 'Submited'],
+    ['APPROVED', 'Approved'],
+    ['COMPLETED', 'Completed'],
+    ['CANCELED', 'Canceled'],
+]
+
+
 class Moves(models.Model):
     id = models.UUIDField(primary_key=True)
-    selected_move_type = models.CharField(max_length=255, blank=True, null=True)
+    selected_move_type = models.CharField(max_length=255, blank=True, null=True, choices=MOVE_TYPES)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
     orders = models.ForeignKey('Orders', models.DO_NOTHING)
-    status = models.CharField(max_length=255)
+    status = models.CharField(max_length=255, choices=MOVE_STATUSES)
     locator = models.CharField(unique=True, max_length=6, blank=True, null=True)
     cancel_reason = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         managed = False
         db_table = 'moves'
+        verbose_name = 'move'
+        verbose_name_plural = 'moves'
+
+    def __str__(self):
+        return self.locator
 
 
 class MovingExpenseDocuments(models.Model):
@@ -193,7 +213,7 @@ class MovingExpenseDocuments(models.Model):
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
     requested_amount_cents = models.IntegerField(blank=True, null=True)
-    payment_method = models.CharField(max_length=-1, blank=True, null=True)
+    payment_method = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -269,6 +289,12 @@ class Orders(models.Model):
     class Meta:
         managed = False
         db_table = 'orders'
+
+    def __str__(self):
+        return '{}: {} to {}'.format(
+            self.service_member.last_name,
+            self.service_member.duty_station.name,
+            self.new_duty_station.name)
 
 
 class PersonallyProcuredMoves(models.Model):
@@ -358,8 +384,8 @@ class ServiceMembers(models.Model):
     phone_is_preferred = models.BooleanField(blank=True, null=True)
     text_message_is_preferred = models.BooleanField(blank=True, null=True)
     email_is_preferred = models.BooleanField(blank=True, null=True)
-    residential_address = models.ForeignKey(Addresses, models.DO_NOTHING, blank=True, null=True)
-    backup_mailing_address = models.ForeignKey(Addresses, models.DO_NOTHING, blank=True, null=True)
+    residential_address = models.ForeignKey(Addresses, models.DO_NOTHING, blank=True, null=True, related_name='+')
+    backup_mailing_address = models.ForeignKey(Addresses, models.DO_NOTHING, blank=True, null=True, related_name='+')
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
     social_security_number = models.ForeignKey('SocialSecurityNumbers', models.DO_NOTHING, blank=True, null=True)
@@ -399,8 +425,10 @@ class ShipmentLineItems(models.Model):
     invoice = models.ForeignKey(Invoices, models.DO_NOTHING, blank=True, null=True)
     amount_cents = models.IntegerField(blank=True, null=True)
     applied_rate = models.IntegerField(blank=True, null=True)
-    item_dimensions = models.ForeignKey(ShipmentLineItemDimensions, models.DO_NOTHING, blank=True, null=True)
-    crate_dimensions = models.ForeignKey(ShipmentLineItemDimensions, models.DO_NOTHING, blank=True, null=True)
+    item_dimensions = models.ForeignKey(ShipmentLineItemDimensions, models.DO_NOTHING, blank=True, null=True,
+                                        related_name='+')
+    crate_dimensions = models.ForeignKey(ShipmentLineItemDimensions, models.DO_NOTHING, blank=True, null=True,
+                                         related_name='+')
     description = models.TextField(blank=True, null=True)
 
     class Meta:
@@ -417,7 +445,8 @@ class ShipmentOffers(models.Model):
     updated_at = models.DateTimeField()
     accepted = models.BooleanField(blank=True, null=True)
     rejection_reason = models.CharField(max_length=255, blank=True, null=True)
-    transportation_service_provider_performance = models.ForeignKey('TransportationServiceProviderPerformances', models.DO_NOTHING)
+    transportation_service_provider_performance = models.ForeignKey('TransportationServiceProviderPerformances',
+                                                                    models.DO_NOTHING)
 
     class Meta:
         managed = False
@@ -439,13 +468,17 @@ class Shipments(models.Model):
     status = models.TextField()
     estimated_pack_days = models.IntegerField(blank=True, null=True)
     estimated_transit_days = models.IntegerField(blank=True, null=True)
-    pickup_address = models.ForeignKey(Addresses, models.DO_NOTHING, blank=True, null=True)
+    pickup_address = models.ForeignKey(Addresses, models.DO_NOTHING, blank=True, null=True,
+                                       related_name='+')
     has_secondary_pickup_address = models.BooleanField()
-    secondary_pickup_address = models.ForeignKey(Addresses, models.DO_NOTHING, blank=True, null=True)
+    secondary_pickup_address = models.ForeignKey(Addresses, models.DO_NOTHING, blank=True, null=True,
+                                                 related_name='+')
     has_delivery_address = models.BooleanField()
-    delivery_address = models.ForeignKey(Addresses, models.DO_NOTHING, blank=True, null=True)
+    delivery_address = models.ForeignKey(Addresses, models.DO_NOTHING, blank=True, null=True,
+                                         related_name='+')
     has_partial_sit_delivery_address = models.BooleanField()
-    partial_sit_delivery_address = models.ForeignKey(Addresses, models.DO_NOTHING, blank=True, null=True)
+    partial_sit_delivery_address = models.ForeignKey(Addresses, models.DO_NOTHING, blank=True, null=True,
+                                                     related_name='+')
     weight_estimate = models.IntegerField(blank=True, null=True)
     progear_weight_estimate = models.IntegerField(blank=True, null=True)
     spouse_progear_weight_estimate = models.IntegerField(blank=True, null=True)
@@ -526,7 +559,7 @@ class StorageInTransits(models.Model):
 
 
 class Tariff400NgFullPackRates(models.Model):
-    id = models.UUIDField(blank=True, null=True)
+    id = models.UUIDField(primary_key=True)
     schedule = models.IntegerField(blank=True, null=True)
     weight_lbs_lower = models.IntegerField(blank=True, null=True)
     weight_lbs_upper = models.IntegerField(blank=True, null=True)
@@ -542,7 +575,7 @@ class Tariff400NgFullPackRates(models.Model):
 
 
 class Tariff400NgFullUnpackRates(models.Model):
-    id = models.UUIDField(blank=True, null=True)
+    id = models.UUIDField(primary_key=True)
     schedule = models.IntegerField(blank=True, null=True)
     rate_millicents = models.IntegerField(blank=True, null=True)
     effective_date_lower = models.DateField(blank=True, null=True)
@@ -591,7 +624,7 @@ class Tariff400NgItems(models.Model):
 
 
 class Tariff400NgLinehaulRates(models.Model):
-    id = models.UUIDField(blank=True, null=True)
+    id = models.UUIDField(primary_key=True)
     distance_miles_lower = models.IntegerField(blank=True, null=True)
     distance_miles_upper = models.IntegerField(blank=True, null=True)
     weight_lbs_lower = models.IntegerField(blank=True, null=True)
@@ -609,7 +642,7 @@ class Tariff400NgLinehaulRates(models.Model):
 
 
 class Tariff400NgServiceAreas(models.Model):
-    id = models.UUIDField(blank=True, null=True)
+    id = models.UUIDField(primary_key=True)
     service_area = models.TextField(blank=True, null=True)
     name = models.TextField(blank=True, null=True)
     services_schedule = models.IntegerField(blank=True, null=True)
@@ -629,7 +662,7 @@ class Tariff400NgServiceAreas(models.Model):
 
 
 class Tariff400NgShorthaulRates(models.Model):
-    id = models.UUIDField(blank=True, null=True)
+    id = models.UUIDField(primary_key=True)
     cwt_miles_lower = models.IntegerField(blank=True, null=True)
     cwt_miles_upper = models.IntegerField(blank=True, null=True)
     rate_cents = models.IntegerField(blank=True, null=True)
@@ -644,7 +677,7 @@ class Tariff400NgShorthaulRates(models.Model):
 
 
 class Tariff400NgZip3S(models.Model):
-    id = models.UUIDField(blank=True, null=True)
+    id = models.UUIDField(primary_key=True)
     zip3 = models.CharField(max_length=3, blank=True, null=True)
     basepoint_city = models.TextField(blank=True, null=True)
     state = models.TextField(blank=True, null=True)
@@ -660,7 +693,7 @@ class Tariff400NgZip3S(models.Model):
 
 
 class Tariff400NgZip5RateAreas(models.Model):
-    id = models.UUIDField(blank=True, null=True)
+    id = models.UUIDField(primary_key=True)
     zip5 = models.CharField(max_length=5, blank=True, null=True)
     rate_area = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
