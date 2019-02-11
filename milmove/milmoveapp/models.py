@@ -468,14 +468,11 @@ class Shipments(models.Model):
     status = models.TextField()
     estimated_pack_days = models.IntegerField(blank=True, null=True)
     estimated_transit_days = models.IntegerField(blank=True, null=True)
-    pickup_address = models.ForeignKey(Addresses, models.DO_NOTHING, blank=True, null=True,
-                                       related_name='+')
+    pickup_address = models.ForeignKey(Addresses, models.DO_NOTHING, blank=True, null=True, related_name='+')
     has_secondary_pickup_address = models.BooleanField()
-    secondary_pickup_address = models.ForeignKey(Addresses, models.DO_NOTHING, blank=True, null=True,
-                                                 related_name='+')
+    secondary_pickup_address = models.ForeignKey(Addresses, models.DO_NOTHING, blank=True, null=True, related_name='+')
     has_delivery_address = models.BooleanField()
-    delivery_address = models.ForeignKey(Addresses, models.DO_NOTHING, blank=True, null=True,
-                                         related_name='+')
+    delivery_address = models.ForeignKey(Addresses, models.DO_NOTHING, blank=True, null=True, related_name='+')
     has_partial_sit_delivery_address = models.BooleanField()
     partial_sit_delivery_address = models.ForeignKey(Addresses, models.DO_NOTHING, blank=True, null=True,
                                                      related_name='+')
